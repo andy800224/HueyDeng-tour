@@ -1,22 +1,23 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <script>
+ <script>
 (function() {
-    // 改用 Google Drive 隱藏版的 Thumbnail (預覽縮圖) API 破解防盜鏈機制
+    // 使用 CORS 代理伺服器繞過 Google 的安全限制，讓截圖套件可以正常打包
     function convertDriveUrl(value) {
         if (typeof value === 'string' && value.includes('drive.google.com')) {
-            // 自動抓取專屬 ID
             var idMatch = value.match(/id=([a-zA-Z0-9_-]+)/) || value.match(/\/d\/([a-zA-Z0-9_-]+)/);
             if (idMatch && idMatch[1]) {
-                // 使用 thumbnail API，sz=w1000 代表照片最高解析度為 1000px，完美避開 Google 阻擋
-                return 'https://drive.google.com/thumbnail?id=' + idMatch[1] + '&sz=w1000';
+                // 1. 先產生 Google Drive 的高解析度縮圖網址
+                var driveUrl = 'https://drive.google.com/thumbnail?id=' + idMatch[1] + '&sz=w1000';
+                
+                // 2. 在網址前面加上「corsproxy.io」代理伺服器，並把原本的網址編碼
+                return 'https://corsproxy.io/?' + encodeURIComponent(driveUrl);
             }
         }
         return value;
     }
 
-    // 1. 攔截 JavaScript 動態產生的圖片
     var originalImgSrcSet = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src').set;
     Object.defineProperty(HTMLImageElement.prototype, 'src', {
         set: function(value) {
@@ -25,7 +26,6 @@
         get: Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src').get
     });
 
-    // 2. 攔截 HTML 標籤寫入的圖片
     var originalSetAttribute = Element.prototype.setAttribute;
     Element.prototype.setAttribute = function(name, value) {
         if (this.tagName === 'IMG' && name.toLowerCase() === 'src') {

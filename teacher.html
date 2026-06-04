@@ -3,19 +3,20 @@
 <head>
   <script>
 (function() {
-    // 自動將 Google Drive 連結轉換為可以直接顯示的圖床連結
+    // 改用 Google Drive 隱藏版的 Thumbnail (預覽縮圖) API 破解防盜鏈機制
     function convertDriveUrl(value) {
         if (typeof value === 'string' && value.includes('drive.google.com')) {
-            // 自動精準擷取雲端硬碟的檔案 ID (支援 id= 或是 /d/ 格式)
+            // 自動抓取專屬 ID
             var idMatch = value.match(/id=([a-zA-Z0-9_-]+)/) || value.match(/\/d\/([a-zA-Z0-9_-]+)/);
             if (idMatch && idMatch[1]) {
-                return 'https://drive.google.com/uc?export=view&id=' + idMatch[1];
+                // 使用 thumbnail API，sz=w1000 代表照片最高解析度為 1000px，完美避開 Google 阻擋
+                return 'https://drive.google.com/thumbnail?id=' + idMatch[1] + '&sz=w1000';
             }
         }
         return value;
     }
 
-    // 1. 攔截所有 <img> 標籤的 src 屬性設定（支援 JavaScript 動態產生的卡片圖片）
+    // 1. 攔截 JavaScript 動態產生的圖片
     var originalImgSrcSet = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src').set;
     Object.defineProperty(HTMLImageElement.prototype, 'src', {
         set: function(value) {
@@ -24,7 +25,7 @@
         get: Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src').get
     });
 
-    // 2. 攔截 setAttribute 方法，確保透過各種網頁語法寫入 src 時都能生效
+    // 2. 攔截 HTML 標籤寫入的圖片
     var originalSetAttribute = Element.prototype.setAttribute;
     Element.prototype.setAttribute = function(name, value) {
         if (this.tagName === 'IMG' && name.toLowerCase() === 'src') {

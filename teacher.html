@@ -1,6 +1,39 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+  <script>
+(function() {
+    // 自動將 Google Drive 連結轉換為可以直接顯示的圖床連結
+    function convertDriveUrl(value) {
+        if (typeof value === 'string' && value.includes('drive.google.com')) {
+            // 自動精準擷取雲端硬碟的檔案 ID (支援 id= 或是 /d/ 格式)
+            var idMatch = value.match(/id=([a-zA-Z0-9_-]+)/) || value.match(/\/d\/([a-zA-Z0-9_-]+)/);
+            if (idMatch && idMatch[1]) {
+                return 'https://drive.google.com/uc?export=view&id=' + idMatch[1];
+            }
+        }
+        return value;
+    }
+
+    // 1. 攔截所有 <img> 標籤的 src 屬性設定（支援 JavaScript 動態產生的卡片圖片）
+    var originalImgSrcSet = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src').set;
+    Object.defineProperty(HTMLImageElement.prototype, 'src', {
+        set: function(value) {
+            originalImgSrcSet.call(this, convertDriveUrl(value));
+        },
+        get: Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src').get
+    });
+
+    // 2. 攔截 setAttribute 方法，確保透過各種網頁語法寫入 src 時都能生效
+    var originalSetAttribute = Element.prototype.setAttribute;
+    Element.prototype.setAttribute = function(name, value) {
+        if (this.tagName === 'IMG' && name.toLowerCase() === 'src') {
+            value = convertDriveUrl(value);
+        }
+        originalSetAttribute.call(this, name, value);
+    };
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>慧燈中學 畢業巡禮</title>
